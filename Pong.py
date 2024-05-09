@@ -119,7 +119,7 @@ def main():
         pongBall.draw(screen)
 
         #render timer to screen
-        screen.blit(render_timer, (350, 25))
+        screen.blit(render_timer, ((screen_width // 2) - (current_timer), (screen_height // 8) - (current_timer // 2)))
 
         pygame.display.flip()
         pygame.time.Clock().tick(60)
