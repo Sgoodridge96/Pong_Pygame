@@ -11,9 +11,9 @@ Run the source code in a IDE of your choice to test the game out.
 Future plans to build an .exe
 
 Bugs:
-no collision with players
-Add an opponent
-Show the correct time limit
-Show and update the score
-Add a point and reset at the center once the pong ball hits either wall behind the players
-Implement a game over screen
+no collision with players:  
+Add an opponent:  
+Show the correct time limit:  
+Show and update the score:  
+Add a point and reset at the center once the pong ball hits either wall behind the players:  
+Implement a game over screen:  
