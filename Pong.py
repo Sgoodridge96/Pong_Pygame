@@ -1,7 +1,5 @@
 import pygame
 import random
-import time
-
 
 # NEXT UPDATE: COLLISIONS FOR PLAYER WITH PONG BALL
 #              Adding an AI player to play against
