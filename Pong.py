@@ -1,8 +1,9 @@
 import pygame
 import random
 
-# NEXT UPDATE: Fix collisions with top of the player rectangle.
+# NEXT UPDATE: Fix collisions with top of the player/ai rectangles.
                #Add scoring points
+               #Reseting pong ball after point is scored
 
 pygame.init()
 
@@ -46,15 +47,21 @@ class PongBall:
         if self.x < 0 + radius or self.x > screen_width - radius:
             self.speed[0] *= -1
     
-    def checkPlayerCollision(self, playerRect):
+    def checkPlayerCollision(self, player_rect, ai_rect):
         
-        player_object = pygame.Rect(playerRect.x, playerRect.y, playerRect.width, playerRect.height)
+        player_object = pygame.Rect(player_rect.x, player_rect.y, player_rect.width, player_rect.height)
+        ai_object = pygame.Rect(ai_rect.x, ai_rect.y, ai_rect.width, ai_rect.height)
         pongball_object = pygame.Rect(self.x - self.radius, self.y - self.radius, self.radius * 2, self.radius * 2) 
         
+        # Check if the ball hits the front of the player
         if pongball_object.colliderect(player_object):
-            # Check if the ball hits the front of the player
-            if pongball_object.right >= player_object.left:  
+            if pongball_object.right >= player_object.left or pongball_object.left >= player_object.right:  
                 self.speed[0] *= -1
+        #Check if the ball hits the front of the ai
+        if pongball_object.colliderect(ai_object):
+            if pongball_object.left >= ai_object.right or pongball_object.right >= ai_object.left:
+                self.speed[0] *= -1
+            
 
 def ballDirection():
     #Randomly pick a ball direction and speed at the start of the game.  
@@ -98,8 +105,9 @@ def main():
     pygame.display.set_caption("Pong")
 
     # Spawn Objects
-    playerRect = PlayerRectangle((screen_width - rect_width) // 16, (screen_height - rect_height) // 2, rect_width, rect_height, actorColor, 5)
-    pongBall = PongBall((screen_width - pongBall_radius) // 2, (screen_height - pongBall_radius) // 2, pongBall_radius, actorColor, pongBall_speed)
+    player_rect = PlayerRectangle((screen_width - rect_width) // 16, (screen_height - rect_height) // 2, rect_width, rect_height, actorColor, 5)
+    ai_rect = PlayerRectangle((screen_width - rect_width) // 1.07, (screen_height - rect_height) // 2, rect_width, rect_height, actorColor, 5)
+    pong_ball = PongBall((screen_width - pongBall_radius) // 2, (screen_height - pongBall_radius) // 2, pongBall_radius, actorColor, pongBall_speed)
 
 
     running = True
@@ -126,16 +134,17 @@ def main():
 
         #Player movement
         keys = pygame.key.get_pressed()
-        playerRect.move(keys, screen_height)
+        player_rect.move(keys, screen_height)
 
         #Fill screen and draw objects
         screen.fill(background)
-        playerRect.draw(screen)
-        pongBall.draw(screen)
+        player_rect.draw(screen)
+        ai_rect.draw(screen)
+        pong_ball.draw(screen)
 
-        pongBall.checkWallCollision(screen_height, screen_width, pongBall_radius)
-        pongBall.checkPlayerCollision(playerRect)
-        pongBall.move()       
+        pong_ball.checkWallCollision(screen_height, screen_width, pongBall_radius)
+        pong_ball.checkPlayerCollision(player_rect, ai_rect)
+        pong_ball.move()       
 
         #render timer to screen
         screen.blit(render_timer, timer_pos)
