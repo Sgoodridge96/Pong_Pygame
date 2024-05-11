@@ -3,6 +3,7 @@ import random
 
 # NEXT UPDATE: Fix collisions with top of the player/ai rectangles.
                #Reset both players when a point is made
+               #Fix pong ball so it actually spawns random directions and speeds
                
 
 pygame.init()
@@ -27,6 +28,8 @@ class PlayerRectangle:
 
 class PongBall:
     def __init__(self, x, y, radius, color, speed):
+        self.spawn_x = x
+        self.spawn_y = y
         self.x = x
         self.y = y
         self.radius = radius
@@ -39,11 +42,17 @@ class PongBall:
 
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, (self.x, self.y), self.radius)
+    
+    def reset(self):
+        self.x = self.spawn_x
+        self.y = self.spawn_y
+        
 
     def checkWallCollision(self, screen_height, screen_width):
-        #Check wall collisions
+        #Check upper and lower wall collisions
         if self.y < 0 + self.radius or self.y > screen_height - self.radius:
             self.speed[1] *= -1
+        #Check side walls (To be removed to for scoring)
         if self.x < 0 + self.radius or self.x > screen_width - self.radius:
             self.speed[0] *= -1
     
@@ -66,15 +75,17 @@ class PongBall:
     def score(self, screen_width, player_score, ai_score):
         if self.x > screen_width - self.radius:
             player_score += 1
+            self.reset()
         if self.x < 0 + self.radius:
             ai_score += 1
+            self.reset()
         return player_score, ai_score
-            
+       
 
 def initialBallDirection():
     #Randomly pick a ball direction and speed at the start of the game.  
     random.seed()
-    starting_speeds = [-5, 5]
+    starting_speeds = [-3, 3]
     ball_direction_x = random.choice(starting_speeds)
     ball_direction_y = random.choice(starting_speeds)
     
