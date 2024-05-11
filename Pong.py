@@ -2,8 +2,8 @@ import pygame
 import random
 
 # NEXT UPDATE: Fix collisions with top of the player/ai rectangles.
-               #Add scoring points
-               #Reseting pong ball after point is scored
+               #Reset both players when a point is made
+               
 
 pygame.init()
 
@@ -40,11 +40,11 @@ class PongBall:
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, (self.x, self.y), self.radius)
 
-    def checkWallCollision(self, screen_height, screen_width, radius):
+    def checkWallCollision(self, screen_height, screen_width):
         #Check wall collisions
-        if self.y < 0 + radius or self.y > screen_height - radius:
+        if self.y < 0 + self.radius or self.y > screen_height - self.radius:
             self.speed[1] *= -1
-        if self.x < 0 + radius or self.x > screen_width - radius:
+        if self.x < 0 + self.radius or self.x > screen_width - self.radius:
             self.speed[0] *= -1
     
     def checkPlayerCollision(self, player_rect, ai_rect):
@@ -57,20 +57,29 @@ class PongBall:
         if pongball_object.colliderect(player_object):
             if pongball_object.right >= player_object.left or pongball_object.left >= player_object.right:  
                 self.speed[0] *= -1
+
         #Check if the ball hits the front of the ai
         if pongball_object.colliderect(ai_object):
             if pongball_object.left >= ai_object.right or pongball_object.right >= ai_object.left:
                 self.speed[0] *= -1
+    
+    def score(self, screen_width, player_score, ai_score):
+        if self.x > screen_width - self.radius:
+            player_score += 1
+        if self.x < 0 + self.radius:
+            ai_score += 1
+        return player_score, ai_score
             
 
-def ballDirection():
+def initialBallDirection():
     #Randomly pick a ball direction and speed at the start of the game.  
     random.seed()
-    starting_speeds = [-2, 2]
+    starting_speeds = [-5, 5]
     ball_direction_x = random.choice(starting_speeds)
     ball_direction_y = random.choice(starting_speeds)
     
     return ball_direction_x, ball_direction_y
+
 
 def main():
     
@@ -84,7 +93,7 @@ def main():
 
     #Define PongBall
     pongBall_radius = 10
-    pongBall_speed = ballDirection()
+    pongBall_speed = initialBallDirection()
     
     #Define Starting timer
     timer_pos = (screen_width // 2 - 100, screen_height // 32)
@@ -142,8 +151,9 @@ def main():
         ai_rect.draw(screen)
         pong_ball.draw(screen)
 
-        pong_ball.checkWallCollision(screen_height, screen_width, pongBall_radius)
+        pong_ball.checkWallCollision(screen_height, screen_width)
         pong_ball.checkPlayerCollision(player_rect, ai_rect)
+        (player_score, ai_score) = pong_ball.score(screen_width, player_score, ai_score)
         pong_ball.move()       
 
         #render timer to screen
@@ -159,4 +169,5 @@ def main():
             running = False
 
     pygame.quit()
+
 main()
