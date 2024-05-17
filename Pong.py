@@ -1,8 +1,8 @@
 import pygame
 import random
 
-# NEXT UPDATE: Fix collisions with top of the player/ai rectangles.
-               #Reset both players when a point is made
+# NEXT UPDATE: #Add speed increase after each point is scored.
+               #Add a pause when a point is scored(reset both ball and players before pausing)
                #Fix pong ball so it actually spawns random directions and speeds
                
 
@@ -10,6 +10,9 @@ pygame.init()
 
 class PlayerRectangle:
     def __init__(self, x, y, width, height, color, speed):
+        #initialize variables
+        self.spawn_x = x
+        self.spawn_y = y
         self.x = x
         self.y = y
         self.width = width
@@ -18,6 +21,7 @@ class PlayerRectangle:
         self.speed = speed
 
     def move(self, keys, screen_height):
+        #set keys to player movement
         if keys[pygame.K_UP] and self.y > 0:
             self.y -= self.speed
         if keys[pygame.K_DOWN] and self.y < screen_height - self.height:
@@ -26,8 +30,15 @@ class PlayerRectangle:
     def draw(self, screen):
         pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
 
+    def reset(self):
+        #reset player
+        self.x = self.spawn_x
+        self.y = self.spawn_y
+        
+
 class PongBall:
     def __init__(self, x, y, radius, color, speed):
+        #initialize variables
         self.spawn_x = x
         self.spawn_y = y
         self.x = x
@@ -37,6 +48,7 @@ class PongBall:
         self.speed = list(speed)
 
     def move(self):
+        #move ball
         self.x += self.speed[0]
         self.y += self.speed[1]
 
@@ -44,6 +56,7 @@ class PongBall:
         pygame.draw.circle(screen, self.color, (self.x, self.y), self.radius)
     
     def reset(self):
+        #reset the ball
         self.x = self.spawn_x
         self.y = self.spawn_y
         
@@ -52,33 +65,56 @@ class PongBall:
         #Check upper and lower wall collisions
         if self.y < 0 + self.radius or self.y > screen_height - self.radius:
             self.speed[1] *= -1
-        #Check side walls (To be removed to for scoring)
-        if self.x < 0 + self.radius or self.x > screen_width - self.radius:
-            self.speed[0] *= -1
-    
-    def checkPlayerCollision(self, player_rect, ai_rect):
-        
-        player_object = pygame.Rect(player_rect.x, player_rect.y, player_rect.width, player_rect.height)
-        ai_object = pygame.Rect(ai_rect.x, ai_rect.y, ai_rect.width, ai_rect.height)
-        pongball_object = pygame.Rect(self.x - self.radius, self.y - self.radius, self.radius * 2, self.radius * 2) 
-        
-        # Check if the ball hits the front of the player
-        if pongball_object.colliderect(player_object):
-            if pongball_object.right >= player_object.left or pongball_object.left >= player_object.right:  
-                self.speed[0] *= -1
 
-        #Check if the ball hits the front of the ai
-        if pongball_object.colliderect(ai_object):
-            if pongball_object.left >= ai_object.right or pongball_object.right >= ai_object.left:
+
+    def checkPlayerCollision(self, player_rect, ai_rect):
+
+        # Check collision with the front of the player  
+        if self.x - self.radius <= player_rect.x + player_rect.width and self.x > player_rect.x:
+            if self.y >= player_rect.y and self.y <= player_rect.y + player_rect.height:
                 self.speed[0] *= -1
-    
-    def score(self, screen_width, player_score, ai_score):
+                self.x = player_rect.x + player_rect.width + self.radius  #Move ball to front of player to prevent the ball from sticking 
+
+        # Check collision with the top or bottom with the player
+        if self.x >= player_rect.x and self.x <= player_rect.x + player_rect.width:
+            if self.y - self.radius <= player_rect.y + player_rect.height and self.y > player_rect.y:
+                self.speed[1] *= -1
+                self.y = player_rect.y + player_rect.height + self.radius  
+            elif self.y + self.radius >= player_rect.y and self.y < player_rect.y + player_rect.height:
+                self.speed[1] *= -1
+                self.y = player_rect.y - self.radius  
+
+        # Check collision with the front of the AI
+        if self.x + self.radius >= ai_rect.x and self.x < ai_rect.x + ai_rect.width:
+            if self.y >= ai_rect.y and self.y <= ai_rect.y + ai_rect.height:
+                self.speed[0] *= -1
+                self.x = ai_rect.x - self.radius  
+
+        # Check collision with the top or bottom of the AI
+        if self.x >= ai_rect.x and self.x <= ai_rect.x + ai_rect.width:
+            if self.y - self.radius <= ai_rect.y + ai_rect.height and self.y > ai_rect.y:
+                self.speed[1] *= -1
+                self.y = ai_rect.y + ai_rect.height + self.radius  
+            elif self.y + self.radius >= ai_rect.y and self.y < ai_rect.y + ai_rect.height:
+                self.speed[1] *= -1
+                self.y = ai_rect.y - self.radius  
+
+    #Update score and reset the ball
+    def score(self, screen_width, player_score, ai_score, player_rect, ai_rect):
         if self.x > screen_width - self.radius:
+            
+            self.reset()
+            player_rect.reset()
+            ai_rect.reset()
             player_score += 1
-            self.reset()
+            
         if self.x < 0 + self.radius:
-            ai_score += 1
+            
             self.reset()
+            player_rect.reset()
+            ai_rect.reset()
+            ai_score += 1
+        
         return player_score, ai_score
        
 
@@ -86,10 +122,7 @@ def initialBallDirection():
     #Randomly pick a ball direction and speed at the start of the game.  
     random.seed()
     starting_speeds = [-3, 3]
-    ball_direction_x = random.choice(starting_speeds)
-    ball_direction_y = random.choice(starting_speeds)
-    
-    return ball_direction_x, ball_direction_y
+    return starting_speeds
 
 
 def main():
@@ -164,7 +197,7 @@ def main():
 
         pong_ball.checkWallCollision(screen_height, screen_width)
         pong_ball.checkPlayerCollision(player_rect, ai_rect)
-        (player_score, ai_score) = pong_ball.score(screen_width, player_score, ai_score)
+        (player_score, ai_score) = pong_ball.score(screen_width, player_score, ai_score, player_rect, ai_rect)
         pong_ball.move()       
 
         #render timer to screen
