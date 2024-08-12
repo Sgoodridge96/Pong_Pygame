@@ -1,12 +1,8 @@
 import pygame
-import random
-
-# NEXT UPDATE: #Add speed increase after each point is scored.
-               #Add a pause when a point is scored(reset both ball and players before pausing)
-               #Fix pong ball so it actually spawns random directions and speeds
-               
+import random               
 
 pygame.init()
+winning_score = 5
 
 class PlayerRectangle:
     def __init__(self, x, y, width, height, color, speed):
@@ -26,6 +22,25 @@ class PlayerRectangle:
             self.y -= self.speed
         if keys[pygame.K_DOWN] and self.y < screen_height - self.height:
             self.y += self.speed
+    
+    def ai_move(self, ball, screen_height):
+        # AI anticipates where the ball is heading
+        ai_center = self.y + self.height // 2
+
+        # Adjust speed based on distance to the ball
+        if abs(ball.y - ai_center) > self.height // 4:
+            if ball.y > ai_center:
+                self.y += min(self.speed, abs(ball.y - ai_center))
+            elif ball.y < ai_center:
+                self.y -= min(self.speed, abs(ball.y - ai_center))
+
+        # Ensure the AI paddle stays within screen bounds
+        if self.y < 0:
+            self.y = 0
+        if self.y > screen_height - self.height:
+            self.y = screen_height - self.height
+
+            
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
@@ -59,9 +74,10 @@ class PongBall:
         #reset the ball
         self.x = self.spawn_x
         self.y = self.spawn_y
+        self.speed = initialBallDirection()
         
 
-    def checkWallCollision(self, screen_height, screen_width):
+    def checkWallCollision(self, screen_height):
         #Check upper and lower wall collisions
         if self.y < 0 + self.radius or self.y > screen_height - self.radius:
             self.speed[1] *= -1
@@ -74,6 +90,10 @@ class PongBall:
             if self.y >= player_rect.y and self.y <= player_rect.y + player_rect.height:
                 self.speed[0] *= -1
                 self.x = player_rect.x + player_rect.width + self.radius  #Move ball to front of player to prevent the ball from sticking 
+                player_updated_speed = []
+                for i in self.speed:
+                    player_updated_speed.append(i * 1.1)
+                self.speed = player_updated_speed
 
         # Check collision with the top or bottom with the player
         if self.x >= player_rect.x and self.x <= player_rect.x + player_rect.width:
@@ -88,7 +108,11 @@ class PongBall:
         if self.x + self.radius >= ai_rect.x and self.x < ai_rect.x + ai_rect.width:
             if self.y >= ai_rect.y and self.y <= ai_rect.y + ai_rect.height:
                 self.speed[0] *= -1
-                self.x = ai_rect.x - self.radius  
+                self.x = ai_rect.x - self.radius
+                ai_updated_speed = []
+                for i in self.speed:
+                    ai_updated_speed.append(i * 1.1)
+                self.speed = ai_updated_speed
 
         # Check collision with the top or bottom of the AI
         if self.x >= ai_rect.x and self.x <= ai_rect.x + ai_rect.width:
@@ -107,6 +131,9 @@ class PongBall:
             player_rect.reset()
             ai_rect.reset()
             player_score += 1
+            if player_score >= winning_score:
+                return player_score, ai_score, True
+            pygame.time.delay(500)
             
         if self.x < 0 + self.radius:
             
@@ -114,15 +141,19 @@ class PongBall:
             player_rect.reset()
             ai_rect.reset()
             ai_score += 1
-        
-        return player_score, ai_score
+            if ai_score >= winning_score:
+                return player_score, ai_score, True
+            pygame.time.delay(500)
+            
+        return player_score, ai_score, False
        
 
-def initialBallDirection():
-    #Randomly pick a ball direction and speed at the start of the game.  
+def initialBallDirection(): 
     random.seed()
-    starting_speeds = [-3, 3]
-    return starting_speeds
+    x_direction = random.choice([-1, 1])
+    y_direction = random.choice([-1, 1])
+    speed = [x_direction * random.randint(2, 3), y_direction * random.randint(2, 4)]
+    return speed
 
 
 def main():
@@ -152,6 +183,9 @@ def main():
     # Define colors
     background = (0, 0, 0)
     actorColor = (230, 255, 255)
+
+    #define gameover
+    game_over = False
     
     #Setup and start Pong game
     screen = pygame.display.set_mode((screen_width, screen_height))
@@ -169,36 +203,46 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-
-        #Logic to countdown timer ("// 1000" for milliseconds to seconds)
-        clock_timer = pygame.time.get_ticks()
-        current_timer = starting_timer - clock_timer // 1000
         
-        #Render clock and exit game when it hits zero
-        timer_text = pygame.font.SysFont(None, 36)
-        render_timer = timer_text.render("Time: " + str(current_timer) + " seconds", True, (230, 255, 255))
+        if not game_over:
 
-        #Render scoreboard for both players
-        player_ui = pygame.font.SysFont(None, 36)
-        ai_ui = pygame.font.SysFont(None, 36)
+            #Logic to countdown timer ("// 1000" for milliseconds to seconds)
+            clock_timer = pygame.time.get_ticks()
+            current_timer = starting_timer - clock_timer // 1000
+            
+            #Render clock and exit game when it hits zero
+            timer_text = pygame.font.SysFont(None, 36)
+            render_timer = timer_text.render("Time: " + str(current_timer) + " seconds", True, (230, 255, 255))
 
-        render_player_ui = player_ui.render("Score: " + str(player_score), True, (230, 255, 255))
-        render_ai_ui = ai_ui.render("Score: " + str(ai_score), True, (230, 255, 255))
+            #Render scoreboard for both players
+            player_ui = pygame.font.SysFont(None, 36)
+            ai_ui = pygame.font.SysFont(None, 36)
 
-        #Player movement
-        keys = pygame.key.get_pressed()
-        player_rect.move(keys, screen_height)
+            render_player_ui = player_ui.render("Score: " + str(player_score), True, (230, 255, 255))
+            render_ai_ui = ai_ui.render("Score: " + str(ai_score), True, (230, 255, 255))
 
-        #Fill screen and draw objects
-        screen.fill(background)
-        player_rect.draw(screen)
-        ai_rect.draw(screen)
-        pong_ball.draw(screen)
+            #Player movement
+            keys = pygame.key.get_pressed()
+            player_rect.move(keys, screen_height)
+            ai_rect.ai_move(pong_ball, screen_height)
 
-        pong_ball.checkWallCollision(screen_height, screen_width)
-        pong_ball.checkPlayerCollision(player_rect, ai_rect)
-        (player_score, ai_score) = pong_ball.score(screen_width, player_score, ai_score, player_rect, ai_rect)
-        pong_ball.move()       
+            #Fill screen and draw objects
+            screen.fill(background)
+            player_rect.draw(screen)
+            ai_rect.draw(screen)
+            pong_ball.draw(screen)
+
+            pong_ball.checkWallCollision(screen_height)
+            pong_ball.checkPlayerCollision(player_rect, ai_rect)
+            (player_score, ai_score, game_over) = pong_ball.score(screen_width, player_score, ai_score, player_rect, ai_rect)
+            pong_ball.move()
+
+            if current_timer <= 0:
+                game_over = True
+
+        if game_over or current_timer <= 0:
+            game_over_text = pygame.font.SysFont(None, 50).render("Game Over", True, (230, 255, 255))
+            screen.blit(game_over_text, (screen_width // 2 - game_over_text.get_width() // 2, screen_height // 2 - game_over_text.get_height() // 2))   
 
         #render timer to screen
         screen.blit(render_timer, timer_pos)
@@ -209,8 +253,6 @@ def main():
         pygame.time.Clock().tick(60)
         
         #If timer hits 0, close game (Fix later with game over screen)
-        if current_timer <= 0:
-            running = False
 
     pygame.quit()
 
